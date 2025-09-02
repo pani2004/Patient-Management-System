@@ -8,6 +8,8 @@ import com.example.Patient_Management_System.Exception.PatientNotFoundException;
 import com.example.Patient_Management_System.Mapper.PatientMapper;
 import com.example.Patient_Management_System.Model.Patient;
 import com.example.Patient_Management_System.Repository.PatientRepository;
+import com.example.Patient_Management_System.grpc.BillingServiceGrpcClient;
+import com.example.Patient_Management_System.kafka.KafkaProducer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,12 @@ public class PatientService {
     @Autowired
     private PatientRepository patientRepository;
 
+    @Autowired
+    private BillingServiceGrpcClient billingServiceGrpcClient;
+
+    @Autowired
+    private KafkaProducer kafkaProducer;
+
     public List<PatientResponseDTO> getPatients(){
         List<Patient> patients = patientRepository.findAll();
         List<PatientResponseDTO> patientResponseDTOS = patients.stream().map(patient -> PatientMapper.toDTO(patient)).toList();
@@ -31,6 +39,8 @@ public class PatientService {
             throw new EmailAlreadyExistsException("A patient with this email already exists"+patientRequestDTO.getEmail());
         }
         Patient newPatient = patientRepository.save(PatientMapper.toModel(patientRequestDTO));
+        billingServiceGrpcClient.createBillingAccount(newPatient.getId().toString(), newPatient.getName(), newPatient.getEmail());
+        kafkaProducer.sendEvent(newPatient);
         return PatientMapper.toDTO(newPatient);
     }
     public PatientResponseDTO updatePatient(UUID id,PatientRequestDTO patientRequestDTO){
