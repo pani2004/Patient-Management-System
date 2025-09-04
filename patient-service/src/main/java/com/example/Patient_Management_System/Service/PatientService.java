@@ -1,6 +1,7 @@
 package com.example.Patient_Management_System.Service;
 
 
+import billing.BillingResponse;
 import com.example.Patient_Management_System.DTO.PatientRequestDTO;
 import com.example.Patient_Management_System.DTO.PatientResponseDTO;
 import com.example.Patient_Management_System.Exception.EmailAlreadyExistsException;
@@ -10,6 +11,7 @@ import com.example.Patient_Management_System.Model.Patient;
 import com.example.Patient_Management_System.Repository.PatientRepository;
 import com.example.Patient_Management_System.grpc.BillingServiceGrpcClient;
 import com.example.Patient_Management_System.kafka.KafkaProducer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class PatientService {
 
@@ -40,7 +43,9 @@ public class PatientService {
         }
         Patient newPatient = patientRepository.save(PatientMapper.toModel(patientRequestDTO));
         billingServiceGrpcClient.createBillingAccount(newPatient.getId().toString(), newPatient.getName(), newPatient.getEmail());
+        log.info("About to send kafka event");
         kafkaProducer.sendEvent(newPatient);
+        log.info("Kafka event call completed");
         return PatientMapper.toDTO(newPatient);
     }
     public PatientResponseDTO updatePatient(UUID id,PatientRequestDTO patientRequestDTO){
