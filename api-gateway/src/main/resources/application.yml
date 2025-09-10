@@ -8,6 +8,12 @@ spring:
         #### Rest Client -> http://localhost:4004/api/patients
         #### Api Gateway -> http://patient-service:4000/patients
         #### Patient Service(Spring Boot App) -> /patients -> Patients Array
+        - id: auth-service-route
+          uri: http://auth-service:4005
+          predicates:
+              - Path=/auth/**
+          filters:
+              - StripPrefix=1
         - id: patient-service-route
           uri: http://patient-service:4000
           predicates:
